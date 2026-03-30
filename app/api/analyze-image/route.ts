@@ -9,8 +9,6 @@ export async function POST(req: Request) {
       headers: {
         "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "http://localhost:3000",
-        "X-Title": "SpyOSINT",
       },
       body: JSON.stringify({
         "model": model,
@@ -18,10 +16,7 @@ export async function POST(req: Request) {
           {
             "role": "user",
             "content": [
-              { 
-                "type": "text", 
-                "text": "Tu es un expert OSINT. Analyse cette image et réponds suivant ce format strict : \n1. **IDENTIFICATION** : Sujet principal et détails.\n2. **INDICES** : Texte, logos ou lieux détectés.\n3. **Mots-clés pour recherche** : (Liste de mots pour Google).\n4. **GOOGLE DORKS** : Propose des commandes comme 'site:twitter.com sujet'.\n\nSois très précis sur les éléments qui permettent de retrouver la source originale." 
-              },
+              { "type": "text", "text": "Identify this person or location. List 5 precise OSINT search keywords." },
               { "type": "image_url", "image_url": { "url": image } }
             ]
           }
@@ -31,18 +26,21 @@ export async function POST(req: Request) {
 
     const data = await response.json();
 
-    if (data.error) {
-      const errorMsg = data.error.message || JSON.stringify(data.error);
-      return NextResponse.json({ error: errorMsg }, { status: 400 });
+    if (!data.choices || data.choices.length === 0) {
+      return NextResponse.json({ identification: "Erreur Modèle", search_keywords: [] });
     }
 
-    if (data.choices && data.choices[0]) {
-      return NextResponse.json({ analysis: data.choices[0].message.content });
-    }
+    // On passe la description brute de Nemotron à l'étape suivante (Dolphin)
+    const rawAnalysis = data.choices[0].message.content;
+    
+    // On simule un format JSON simple pour le frontend en attendant Dolphin
+    return NextResponse.json({ 
+        raw_vision: rawAnalysis,
+        identification: "Analyse visuelle terminée...",
+        search_keywords: [rawAnalysis.substring(0, 50)] // Extraction temporaire
+    });
 
-    return NextResponse.json({ error: "Réponse vide du modèle" }, { status: 500 });
-
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Erreur serveur" }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ identification: "Erreur Système" }, { status: 500 });
   }
 }

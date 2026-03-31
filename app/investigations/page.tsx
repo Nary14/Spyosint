@@ -6,14 +6,15 @@ import { Clock, Globe, User, ImageIcon, Search } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { supabase } from "@/lib/supabaseClient"
 import { SkeletonList } from "@/components/dashboard/skeleton-card"
+import Link from "next/link"
 
 interface Investigation {
-    id: number
-    title: string
-    type: string
-    status: "completed" | "in-progress" | "pending"
-    date: string
-    results: number
+    id: string;
+    title: string;
+    type: string;
+    status: "completed" | "in-progress" | "pending";
+    created_at: string;
+    results: number;
 }
 
 const getTypeIcon = (type: string) => {
@@ -48,10 +49,10 @@ export default function InvestigationsPage() {
         const { data, error } = await supabase
             .from("investigations")
             .select("*")
-            .order("date", { ascending: false })
+            .order("created_at", { ascending: false }) // Correction du nom de la colonne ici
 
         if (error) {
-            console.error("Erreur Supabase:", error)
+            console.error("Détails Supabase:", error.message, error.details, error.hint);
             setInvestigations([])
         } else {
             setInvestigations(data as Investigation[])
@@ -82,24 +83,36 @@ export default function InvestigationsPage() {
                             {investigations.map((inv) => {
                                 const Icon = getTypeIcon(inv.type)
                                 return (
-                                    <div
-                                        key={inv.id}
-                                        className="flex items-center gap-4 p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
-                                    >
-                                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
-                                            <Icon className="h-5 w-5 text-primary" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-medium text-foreground truncate">{inv.title}</p>
-                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                <Clock className="h-3 w-3" />
-                                                <span>{new Date(inv.date).toLocaleDateString()}</span>
-                                                <span className="text-border">•</span>
-                                                <span>{inv.results} résultats</span>
+                                    <Link 
+                                        href={`/investigations/${inv.id}`} 
+                                        key={inv.id} 
+                                        className="block w-full group"
+                                >
+                                        <div className="flex items-center gap-4 p-3 rounded-xl bg-secondary/30 hover:bg-emerald-500/5 transition-all cursor-pointer border border-transparent hover:border-emerald-500/20 shadow-sm hover:shadow-emerald-500/5">
+                                            {/* Icône */}
+                                            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-emerald-500/20 transition-colors">
+                                                <Icon className="h-5 w-5 text-primary group-hover:text-emerald-500" />
+                                            </div>
+
+                                            {/* Texte */}
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-bold text-foreground truncate group-hover:text-white transition-colors">
+                                                    {inv.title}
+                                                </p>
+                                                <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-tighter text-muted-foreground group-hover:text-emerald-500/50">
+                                                    <Clock className="h-3 w-3" />
+                                                    <span>{new Date(inv.created_at).toLocaleDateString()}</span>
+                                                    <span className="opacity-30">•</span>
+                                                    <span>{inv.results} résultats identifiés</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Status Badge */}
+                                            <div className="shrink-0 flex items-center gap-3">
+                                                {getStatusBadge(inv.status)}
                                             </div>
                                         </div>
-                                        {getStatusBadge(inv.status)}
-                                    </div>
+                                    </Link>
                                 )
                             })}
                         </div>

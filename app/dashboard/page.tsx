@@ -77,9 +77,6 @@ export default function HomePage() {
                 <h1 className="text-4xl font-black uppercase tracking-tighter text-white">
                     Tableau de <span className="text-emerald-500">Bord</span>
                 </h1>
-                <p className="text-emerald-500/60 font-mono text-xs uppercase tracking-widest italic">
-                    {">"} Terminal de contrôle OSINT actif
-                </p>
             </div>
 
             {/* SECTION 1 : STATS (Pleine largeur) */}

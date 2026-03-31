@@ -123,3 +123,14 @@
     @apply bg-background text-foreground;
   }
 }
+@layer utilities {
+  @keyframes eye-blink {
+    0%, 90%, 100% { opacity: 1; transform: scaleY(1); } 
+    95% { opacity: 0; transform: scaleY(0.1); }          
+  }
+
+  .animate-eye-blink {
+    animation: eye-blink 4s infinite;
+    transform-origin: center;
+  }
+}

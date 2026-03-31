@@ -1,11 +1,11 @@
 'use client'
 
-import React from "react"
-
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from "react"
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, ShieldCheck, Lock, Mail, ChevronRight, AlertCircle, CheckCircle2 } from 'lucide-react'
+import '../welcome/spyosint-animations.css'
+import ParticlesBackground from './ParticlesBackground';
 
 type AuthMode = 'login' | 'signup'
 
@@ -43,84 +43,52 @@ export default function AuthPage() {
   }, [mode])
 
   const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    return emailRegex.test(email)
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   }
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {}
+    if (!formData.email) newErrors.email = 'Email requis'
+    else if (!validateEmail(formData.email)) newErrors.email = 'Format invalide'
 
-    if (!formData.email) {
-      newErrors.email = 'Email is required'
-    } else if (!validateEmail(formData.email)) {
-      newErrors.email = 'Invalid email format'
-    }
-
-    if (!formData.password) {
-      newErrors.password = 'Password is required'
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters'
-    }
+    if (!formData.password) newErrors.password = 'Mot de passe requis'
+    else if (formData.password.length < 6) newErrors.password = 'Minimum 6 caractères'
 
     if (mode === 'signup') {
-      if (!formData.confirmPassword) {
-        newErrors.confirmPassword = 'Please confirm your password'
-      } else if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = 'Passwords do not match'
+      if (formData.password !== formData.confirmPassword) {
+        newErrors.confirmPassword = 'Les mots de passe ne correspondent pas'
       }
     }
-
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
-  const handleLogin = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
     if (!validateForm()) return
 
     setLoading(true)
-    setSuccess('')
+    setErrors({})
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password,
-      })
-
-      if (error) {
-        setErrors({ general: error.message })
+      if (mode === 'login') {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
+        })
+        if (error) throw error
+        setSuccess('Accès autorisé. Redirection...')
+        setTimeout(() => router.push('/dashboard'), 1500)
       } else {
-        setSuccess('Login successful! Redirecting...')
-        setTimeout(() => {
-          router.push('/dashboard')
-        }, 1500)
+        const { error } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+        })
+        if (error) throw error
+        setSuccess('Profil créé. Vérifiez vos emails.')
       }
-    } catch (error) {
-      setErrors({ general: 'An unexpected error occurred' })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleSignup = async () => {
-    if (!validateForm()) return
-
-    setLoading(true)
-    setSuccess('')
-
-    try {
-      const { error } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-      })
-
-      if (error) {
-        setErrors({ general: error.message })
-      } else {
-        setSuccess('Signup successful! Please check your email to verify your account.')
-        setFormData({ email: '', password: '', confirmPassword: '' })
-      }
-    } catch (error) {
-      setErrors({ general: 'An unexpected error occurred' })
+    } catch (error: any) {
+      setErrors({ general: error.message })
     } finally {
       setLoading(false)
     }
@@ -128,179 +96,134 @@ export default function AuthPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
-    if (errors[name as keyof FormErrors]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: undefined,
-      }))
-    }
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (mode === 'login') {
-      handleLogin()
-    } else {
-      handleSignup()
-    }
+    setFormData(prev => ({ ...prev, [name]: value }))
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-slate-900 rounded-lg border border-slate-800 shadow-2xl p-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2 text-center">
-            {mode === 'login' ? 'Welcome Back' : 'Join Us'}
+    <main className="min-h-screen bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
+      <ParticlesBackground />
+      {/* Background FX */}
+      <div className="hud-grid opacity-20 absolute inset-0 pointer-events-none" />
+      <div className="scanlines absolute inset-0 opacity-10 pointer-events-none" />
+      <div className="absolute w-[500px] h-[500px] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none" />
+
+      <div className="w-full max-w-md z-10 animate-slide-up">
+        {/* Visual Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-900 border border-blue-500/30 mb-4 neon-border">
+            <ShieldCheck className={`w-8 h-8 ${loading ? 'animate-pulse text-blue-400' : 'text-blue-400'}`} />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tighter text-white  font-mono">
+            {mode === 'login' ? 'Identification Requise' : 'Enregistrement Agent'}
           </h1>
-          <p className="text-slate-400 text-center">
-            {mode === 'login'
-              ? 'Sign in to your account'
-              : 'Create a new account'}
-          </p>
         </div>
 
-        {/* Success Message */}
-        {success && (
-          <div className="mb-6 p-4 bg-emerald-900 border border-emerald-700 rounded-lg">
-            <p className="text-emerald-200 text-sm">{success}</p>
-          </div>
-        )}
+        <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 p-8 rounded-2xl shadow-2xl relative overflow-hidden">
+          {/* Decorative Top Line */}
+          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-blue-500 to-transparent" />
 
-        {/* General Error */}
-        {errors.general && (
-          <div className="mb-6 p-4 bg-red-900 border border-red-700 rounded-lg">
-            <p className="text-red-200 text-sm">{errors.general}</p>
-          </div>
-        )}
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Email Field */}
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-slate-200 mb-2">
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              placeholder="your@email.com"
-              className={`w-full px-4 py-2 rounded-lg bg-slate-800 border ${
-                errors.email ? 'border-red-500' : 'border-slate-700'
-              } text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition`}
-            />
-            {errors.email && (
-              <p className="text-red-400 text-xs mt-1">{errors.email}</p>
-            )}
-          </div>
-
-          {/* Password Field */}
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-slate-200 mb-2">
-              Password
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                placeholder="••••••••"
-                className={`w-full px-4 py-2 rounded-lg bg-slate-800 border ${
-                  errors.password ? 'border-red-500' : 'border-slate-700'
-                } text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition"
-              >
-                {showPassword ? (
-                  <EyeOff size={18} />
-                ) : (
-                  <Eye size={18} />
-                )}
-              </button>
+          {/* Messages */}
+          {success && (
+            <div className="mb-6 p-3 bg-emerald-500/10 border border-emerald-500/50 rounded flex items-center gap-3 animate-flicker">
+              <CheckCircle2 className="text-emerald-400 w-4 h-4" />
+              <p className="text-emerald-400 text-xs font-mono uppercase">{success}</p>
             </div>
-            {errors.password && (
-              <p className="text-red-400 text-xs mt-1">{errors.password}</p>
-            )}
-          </div>
-
-          {/* Confirm Password Field (Signup only) */}
-          {mode === 'signup' && (
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-200 mb-2">
-                Confirm Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  placeholder="••••••••"
-                  className={`w-full px-4 py-2 rounded-lg bg-slate-800 border ${
-                    errors.confirmPassword ? 'border-red-500' : 'border-slate-700'
-                  } text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition"
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff size={18} />
-                  ) : (
-                    <Eye size={18} />
-                  )}
-                </button>
-              </div>
-              {errors.confirmPassword && (
-                <p className="text-red-400 text-xs mt-1">{errors.confirmPassword}</p>
-              )}
+          )}
+          {errors.general && (
+            <div className="mb-6 p-3 bg-red-500/10 border border-red-500/50 rounded flex items-center gap-3">
+              <AlertCircle className="text-red-400 w-4 h-4" />
+              <p className="text-red-400 text-xs font-mono uppercase">{errors.general}</p>
             </div>
           )}
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={loading}
-            className={`w-full py-2 px-4 rounded-lg font-semibold text-white transition mt-6 flex items-center justify-center gap-2 ${
-              loading
-                ? 'bg-slate-700 cursor-not-allowed'
-                : 'bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700'
-            }`}
-          >
-            {loading && (
-              <div className="w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-loader-spin" />
-            )}
-            {loading ? 'Chargement...' : mode === 'login' ? 'Sign In' : 'Create Account'}
-          </button>
-        </form>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Input Email */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-mono text-slate-500  ml-1">Email Address</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  placeholder="agent@spyosint.net"
+                  className="w-full bg-slate-950/50 border border-slate-800 rounded-lg pl-10 pr-4 py-2 text-sm font-mono text-white focus:border-blue-500/50 focus:ring-0 transition-all outline-none"
+                />
+              </div>
+              {errors.email && <p className="text-red-500 text-[10px] font-mono uppercase">{errors.email}</p>}
+            </div>
 
-        {/* Mode Toggle */}
-        <div className="mt-6 pt-6 border-t border-slate-800">
-          <p className="text-slate-400 text-sm text-center">
-            {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}{' '}
+            {/* Input Password */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-mono text-slate-500  ml-1">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  placeholder="••••••••"
+                  className="w-full bg-slate-950/50 border border-slate-800 rounded-lg pl-10 pr-10 py-2 text-sm font-mono text-white focus:border-blue-500/50 outline-none transition-all"
+                />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 hover:text-blue-400 transition-colors">
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {errors.password && <p className="text-red-500 text-[10px] font-mono uppercase">{errors.password}</p>}
+            </div>
+
+            {/* Confirm Password (Signup) */}
+            {mode === 'signup' && (
+              <div className="space-y-2 animate-slide-down">
+                <label className="text-[10px] font-mono text-slate-500  ml-1">Confirm password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    placeholder="••••••••"
+                    className="w-full bg-slate-950/50 border border-slate-800 rounded-lg pl-10 py-2 text-sm font-mono text-white focus:border-blue-500/50 outline-none transition-all"
+                  />
+                </div>
+                {errors.confirmPassword && <p className="text-red-500 text-[10px] font-mono ">{errors.confirmPassword}</p>}
+              </div>
+            )}
+
             <button
-              onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
-              className="text-blue-400 hover:text-blue-300 font-semibold transition"
+              type="submit"
+              disabled={loading}
+              className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-white font-bold py-3 rounded-xl transition-all group overflow-hidden relative mt-4"
             >
-              {mode === 'login' ? 'Sign up' : 'Sign in'}
+              <span className="relative z-10 flex items-center justify-center gap-2 font-mono text-xs tracking-tighter">
+                {loading ? 'initialisation...' : mode === 'login' ? 'Connexion ' : 'S\'enregistrer'}
+                {!loading && <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />}
+              </span>
             </button>
-          </p>
+          </form>
+
+          <div className="mt-8 pt-6 border-t border-slate-800 text-center">
+            <button 
+              onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+              className="text-[10px] font-mono text-slate-500 hover:text-blue-400 transition-colors"
+            >
+              {mode === 'login' ? " Besoin d'un accès ? Enregistrement" : " Déjà enregistré ? Identification"}
+            </button>
+          </div>
+        </div>
+
+        {/* Security Footer */}
+        <div className="mt-8 flex justify-between items-center opacity-40 font-mono text-[9px] tracking-widest text-slate-500">
+           <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
+              Secure Access
+           </div>
+           <span>Nary SpyOSINT</span>
         </div>
       </div>
-    </div>
+    </main>
   )
 }
